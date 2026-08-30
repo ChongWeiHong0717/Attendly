@@ -733,3 +733,29 @@ tbody tr:hover { background:#fbfcfe; }
 .server-url-field { width:100%; display:flex; flex-direction:column; gap:6px; color:var(--muted); font-size:11px; font-weight:700; }
 .server-url-field input { width:100%; min-height:40px; border:1px solid var(--border); border-radius:9px; padding:9px 10px; background:#fff; color:var(--text); font:inherit; font-size:12px; }
 .server-url-field input:focus { outline:2px solid rgba(79,70,229,.15); border-color:var(--primary); }
+
+
+/* v1.4 testing date selector for NFC check-in */
+.terminal-date-control {
+  display: grid;
+  gap: 6px;
+  width: min(260px, 100%);
+  margin-top: 14px;
+}
+.terminal-date-control > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.terminal-date-control small {
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.terminal-date-control .date-field:disabled {
+  cursor: not-allowed;
+  background: var(--surface-muted, #eef2f7);
+  color: #94a3b8;
+}

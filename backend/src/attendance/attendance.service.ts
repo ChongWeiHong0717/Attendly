@@ -49,7 +49,7 @@ export class AttendanceService {
       presentCount: session
         ? students.length - absentIds.size
         : nfcPresentIds.size,
-      absentCount: session ? absentIds.size : null,
+      absentCount: session ? absentIds.size : students.length - nfcPresentIds.size,
       nfcPresentCount: nfcPresentIds.size,
       students: students.map((student) => ({
         ...student,

@@ -297,7 +297,7 @@ export class NfcService {
         className: existing.classRoom
           ? `${existing.classRoom.formLevel} ${existing.classRoom.name}`
           : 'Unassigned',
-        message: 'Student has already checked in today.',
+        message: 'Student has already checked in for this date.',
         checkedInAt: existing.checkedInAt.toISOString(),
       };
     }
@@ -352,7 +352,7 @@ export class NfcService {
             className: duplicate.classRoom
               ? `${duplicate.classRoom.formLevel} ${duplicate.classRoom.name}`
               : 'Unassigned',
-            message: 'Student has already checked in today.',
+            message: 'Student has already checked in for this date.',
             checkedInAt: duplicate.checkedInAt.toISOString(),
           };
         }

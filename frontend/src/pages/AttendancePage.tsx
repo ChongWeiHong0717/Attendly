@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Check, CheckCircle2, Save, X } from 'lucide-react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { api, todayString } from '../lib/api';
 import type { ClassRoom } from '../lib/types';
@@ -12,22 +12,23 @@ type Snapshot={date:string;completed:boolean;presentCount:number|null;absentCoun
 function initials(name:string){return name.split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]?.toUpperCase()).join('') || 'ST'}
 
 export function AttendancePage(){
-  const {classId=''}=useParams(); const location=useLocation(); const classRoom=(location.state as any)?.classRoom as ClassRoom|undefined;
-  const [date,setDate]=useState(todayString()); const [rows,setRows]=useState<Row[]>([]); const [completed,setCompleted]=useState(false); const [busy,setBusy]=useState(false); const [error,setError]=useState(''); const [saved,setSaved]=useState('');
+  const {classId=''}=useParams(); const location=useLocation(); const [searchParams,setSearchParams]=useSearchParams(); const classRoom=(location.state as any)?.classRoom as ClassRoom|undefined;
+  const initialDate=searchParams.get('date') || todayString();
+  const [date,setDate]=useState(initialDate); const [rows,setRows]=useState<Row[]>([]); const [completed,setCompleted]=useState(false); const [busy,setBusy]=useState(false); const [error,setError]=useState(''); const [saved,setSaved]=useState('');
   async function load(){setError('');try{const s=await api<Snapshot>(`/attendance/class/${classId}?date=${date}`);setRows(s.students);setCompleted(s.completed);setSaved('');}catch(e:any){setError(e.message)}}
-  useEffect(()=>{load()},[classId,date]);
+  useEffect(()=>{setSearchParams({date},{replace:true});load()},[classId,date]);
   const counts=useMemo(()=>({present:rows.filter(r=>r.status==='PRESENT').length,absent:rows.filter(r=>r.status==='ABSENT').length,unmarked:rows.filter(r=>r.status==='UNMARKED').length}),[rows]);
   const marked=counts.present+counts.absent; const progress=rows.length?Math.round(marked/rows.length*100):0;
   function mark(id:string,status:'PRESENT'|'ABSENT'){setRows(r=>r.map(x=>x.id===id?{...x,status}:x));setSaved('');setError('')}
   async function save(){if(counts.unmarked){setError('Mark every student Present or Absent before saving.');return;}setBusy(true);setError('');try{await api(`/attendance/class/${classId}`,{method:'POST',body:JSON.stringify({date,statuses:rows.map(r=>({studentId:r.id,status:r.status}))})});setCompleted(true);setSaved('Attendance saved.');}catch(e:any){setError(e.message)}finally{setBusy(false)}}
 
   return <AppShell><main className="page-container max-w-6xl pb-28 sm:pb-8">
-    <Link to={`/teacher/classes/${classId}`} state={{classRoom}} className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm font-bold text-slate-500 transition hover:text-slate-900"><ArrowLeft size={17}/>Back to class</Link>
+    <Link to={`/teacher/classes/${classId}?date=${date}`} state={{classRoom}} className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm font-bold text-slate-500 transition hover:text-slate-900"><ArrowLeft size={17}/>Back to class</Link>
 
     <section className="class-focus-panel mb-5">
       <div className="relative z-10 grid gap-5 lg:grid-cols-[1fr_220px] lg:items-end">
         <div><span className="status-chip bg-[var(--primary-soft)] text-[var(--primary)]">{classRoom?`${classRoom.formLevel} ${classRoom.name}`:'Class'}</span><h1 className="mt-3 text-[2rem] font-extrabold tracking-[-.035em] text-slate-900 sm:text-[2.4rem]">Attendance</h1><p className="mt-1.5 text-sm text-slate-500">{completed?'Editing saved attendance.':'Mark each student Present or Absent.'}</p></div>
-        <label><span className="field-label">Date</span><input type="date" value={date} onChange={e=>setDate(e.target.value)} className="field"/></label>
+        <label><span className="field-label">Date</span><input type="date" value={date} max={todayString()} onChange={e=>setDate(e.target.value)} className="field"/></label>
       </div>
     </section>
 

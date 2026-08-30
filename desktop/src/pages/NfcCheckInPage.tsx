@@ -80,19 +80,20 @@ export default function NfcCheckInPage({
   const [continuousState, setContinuousState] =
     useState<ContinuousState>({ active: false });
   const [busy, setBusy] = useState(false);
+  const [checkInDate, setCheckInDate] = useState(todayString());
   const pendingUids = useRef(new Set<string>());
   const mounted = useRef(true);
   const runningRef = useRef(false);
 
-  const today = useMemo(
+  const selectedDateLabel = useMemo(
     () =>
       new Intl.DateTimeFormat('en-MY', {
         weekday: 'long',
         day: 'numeric',
         month: 'long',
         year: 'numeric',
-      }).format(new Date()),
-    [],
+      }).format(new Date(`${checkInDate}T00:00:00`)),
+    [checkInDate],
   );
 
   useEffect(() => {
@@ -109,7 +110,7 @@ export default function NfcCheckInPage({
     try {
       const result = await attendanceApi.nfcCheckIn(
         normalized,
-        todayString(),
+        checkInDate,
       );
 
       if (!mounted.current) return;
@@ -154,7 +155,7 @@ export default function NfcCheckInPage({
     } finally {
       pendingUids.current.delete(normalized);
     }
-  }, []);
+  }, [checkInDate]);
 
   useEffect(() => {
     mounted.current = true;
@@ -263,7 +264,23 @@ export default function NfcCheckInPage({
           <div>
             <div className="eyebrow">Gate attendance</div>
             <h1>NFC Check-In</h1>
-            <p>{today}</p>
+            <p>{selectedDateLabel}</p>
+            <label className="terminal-date-control">
+              <span>Check-In Date</span>
+              <input
+                className="date-field"
+                type="date"
+                value={checkInDate}
+                disabled={running || busy}
+                onChange={(event) => {
+                  setCheckInDate(event.target.value || todayString());
+                  setLatest(null);
+                  setScans([]);
+                  setTerminalState('idle');
+                }}
+              />
+              <small>Defaults to today. Stop scanning before changing dates.</small>
+            </label>
           </div>
 
           <div className="reader-actions">
@@ -455,6 +472,7 @@ export default function NfcCheckInPage({
                 value={running ? 'Active' : 'Stopped'}
                 good={running}
               />
+              <Fact label="Check-in date" value={checkInDate} />
               <Fact label="Database" value="Shared API" good />
               <Fact label="Operator" value={user.name} />
             </div>
