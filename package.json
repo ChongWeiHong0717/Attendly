@@ -1,0 +1,22 @@
+{
+  "name": "attendly-school-attendance",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "desktop"
+  ],
+  "scripts": {
+    "dev": "concurrently -n API,WEB \"npm run start:dev -w backend\" \"npm run dev -w frontend\"",
+    "dev:desktop": "concurrently -n API,DESKTOP \"npm run start:dev -w backend\" \"npm run dev -w desktop\"",
+    "dev:all": "concurrently -n API,WEB,DESKTOP \"npm run start:dev -w backend\" \"npm run dev -w frontend\" \"npm run dev -w desktop\"",
+    "setup": "npm install && node backend/scripts/create-database.cjs && npm run prisma:generate -w backend && npm run db:push -w backend && npm run db:seed -w backend",
+    "db:update": "npm run prisma:generate -w backend && npm run db:push -w backend",
+    "build": "npm run build -w backend && npm run build -w frontend && npm run build -w desktop",
+    "build:web": "npm run build -w backend && npm run build -w frontend",
+    "deploy:db": "npm run db:deploy -w backend && npm run db:bootstrap -w backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

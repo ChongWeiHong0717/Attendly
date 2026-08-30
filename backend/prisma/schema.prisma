@@ -1,0 +1,192 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  TEACHER
+}
+
+enum StudentStatus {
+  ACTIVE
+  GRADUATED
+  ARCHIVED
+}
+
+enum AcademicYearStatus {
+  ACTIVE
+  CLOSED
+}
+
+model User {
+  id                 String                   @id @default(cuid())
+  name               String
+  email              String                   @unique
+  passwordHash       String
+  role               UserRole                 @default(TEACHER)
+  isActive           Boolean                  @default(true)
+  teacherAssignments TeacherClassAssignment[]
+  attendanceSessions AttendanceSession[]
+  nfcAssignments     NfcCardAssignment[]      @relation("NfcAssignmentActor")
+  nfcCheckIns        NfcCheckIn[]             @relation("NfcCheckInActor")
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+}
+
+model AcademicYear {
+  id                 String                   @id @default(cuid())
+  name               String                   @unique
+  status             AcademicYearStatus       @default(ACTIVE)
+  enrollments        StudentEnrollment[]
+  teacherAssignments TeacherClassAssignment[]
+  attendanceSessions AttendanceSession[]
+  nfcCheckIns        NfcCheckIn[]
+  createdAt          DateTime                 @default(now())
+}
+
+model ClassRoom {
+  id                 String                   @id @default(cuid())
+  name               String
+  formLevel          Int
+  isActive           Boolean                  @default(true)
+  enrollments        StudentEnrollment[]
+  teacherAssignments TeacherClassAssignment[]
+  attendanceSessions AttendanceSession[]
+  nfcCheckIns        NfcCheckIn[]
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  @@unique([formLevel, name])
+  @@index([formLevel, isActive])
+}
+
+model Student {
+  id                 String              @id @default(cuid())
+  studentCode        String              @unique
+  fullName           String
+  icNumber           String?             @unique
+  status             StudentStatus       @default(ACTIVE)
+  enrollments        StudentEnrollment[]
+  absences           Absence[]
+  nfcCard            NfcCard?
+  nfcCardAssignments NfcCardAssignment[]
+  nfcCheckIns        NfcCheckIn[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@index([fullName])
+  @@index([status])
+}
+
+model StudentSequence {
+  id           Int @id
+  lastAssigned Int @default(0)
+}
+
+model StudentEnrollment {
+  id             String       @id @default(cuid())
+  studentId      String
+  academicYearId String
+  classRoomId    String
+  student        Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  classRoom      ClassRoom    @relation(fields: [classRoomId], references: [id], onDelete: Restrict)
+  createdAt      DateTime     @default(now())
+
+  @@unique([studentId, academicYearId])
+  @@index([academicYearId, classRoomId])
+}
+
+model TeacherClassAssignment {
+  id             String       @id @default(cuid())
+  teacherId      String
+  academicYearId String
+  classRoomId    String
+  teacher        User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  classRoom      ClassRoom    @relation(fields: [classRoomId], references: [id], onDelete: Restrict)
+  createdAt      DateTime     @default(now())
+
+  @@unique([teacherId, academicYearId, classRoomId])
+  @@index([academicYearId, classRoomId])
+}
+
+model AttendanceSession {
+  id             String       @id @default(cuid())
+  academicYearId String
+  classRoomId    String
+  teacherId      String
+  date           DateTime     @db.Date
+  completedAt    DateTime     @default(now())
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  classRoom      ClassRoom    @relation(fields: [classRoomId], references: [id], onDelete: Restrict)
+  teacher        User         @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  absences       Absence[]
+
+  @@unique([academicYearId, classRoomId, date])
+  @@index([date])
+}
+
+model Absence {
+  id        String            @id @default(cuid())
+  sessionId String
+  studentId String
+  session   AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student   Student           @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  createdAt DateTime          @default(now())
+
+  @@unique([sessionId, studentId])
+  @@index([studentId])
+}
+
+model NfcCard {
+  id          String              @id @default(cuid())
+  uid         String              @unique @db.VarChar(32)
+  studentId   String?             @unique
+  student     Student?            @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  assignments NfcCardAssignment[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([studentId])
+}
+
+model NfcCardAssignment {
+  id           String   @id @default(cuid())
+  cardId       String
+  studentId    String
+  assignedById String
+  assignedAt   DateTime @default(now())
+  unassignedAt DateTime?
+  card         NfcCard  @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  assignedBy   User     @relation("NfcAssignmentActor", fields: [assignedById], references: [id], onDelete: Restrict)
+
+  @@index([cardId, unassignedAt])
+  @@index([studentId, unassignedAt])
+}
+
+model NfcCheckIn {
+  id             String       @id @default(cuid())
+  studentId      String
+  scannedById    String
+  academicYearId String
+  classRoomId    String?
+  uid            String       @db.VarChar(32)
+  date           DateTime     @db.Date
+  checkedInAt    DateTime     @default(now())
+  student        Student      @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  scannedBy      User         @relation("NfcCheckInActor", fields: [scannedById], references: [id], onDelete: Restrict)
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  classRoom      ClassRoom?   @relation(fields: [classRoomId], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, date])
+  @@index([date, checkedInAt])
+  @@index([academicYearId, classRoomId, date])
+  @@index([uid])
+}
